@@ -32,6 +32,7 @@ namespace HomeMyDay.Infrastructure.Repository
 				var accommodations = new List<Accommodation>();
 
 				HttpWebRequest request = (HttpWebRequest)WebRequest.Create(uri);
+				request.ServerCertificateValidationCallback += (sender, certificate, chain, sslPolicyErrors) => true;
 				request.Method = WebRequestMethods.Http.Get;
 
 				HttpWebResponse response = (HttpWebResponse)request.GetResponse();
@@ -49,7 +50,8 @@ namespace HomeMyDay.Infrastructure.Repository
 			}
 			catch(Exception ex)
 			{
-				throw new Exception("An error has occurred while retrieving accommodations");
+				Console.WriteLine(ex.ToString());
+				throw new Exception("An error has occurred while retrieving accommodations: '{0}'", ex);
 			}				
 		}
 
@@ -60,6 +62,7 @@ namespace HomeMyDay.Infrastructure.Repository
 				var accommodation = new Accommodation();
 
 				HttpWebRequest request = (HttpWebRequest)WebRequest.Create(uri + "/" + id);
+				request.ServerCertificateValidationCallback += (sender, certificate, chain, sslPolicyErrors) => true;
 				request.Method = WebRequestMethods.Http.Get;
 
 				HttpWebResponse response = (HttpWebResponse)request.GetResponse();
@@ -88,6 +91,9 @@ namespace HomeMyDay.Infrastructure.Repository
 				var accommodations = new List<Accommodation>();
 
 				HttpWebRequest request = (HttpWebRequest)WebRequest.Create(uri);
+
+				request.ServerCertificateValidationCallback += (sender, certificate, chain, sslPolicyErrors) => true;
+
 				request.Method = WebRequestMethods.Http.Get;
 
 				HttpWebResponse response = (HttpWebResponse)request.GetResponse();
@@ -137,6 +143,7 @@ namespace HomeMyDay.Infrastructure.Repository
 				var url = $"{uri}?search={location}&dateFrom={dateFrom}&dateTo={dateTo}&persons={amountOfGuests}"; 
 
 				HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
+				request.ServerCertificateValidationCallback += (sender, certificate, chain, sslPolicyErrors) => true;
 				request.Method = WebRequestMethods.Http.Get;
 
 				HttpWebResponse response = (HttpWebResponse)request.GetResponse();
