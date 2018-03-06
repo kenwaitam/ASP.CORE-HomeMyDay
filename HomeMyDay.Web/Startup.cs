@@ -1,22 +1,25 @@
-﻿using System.Globalization;
+﻿using Halcyon.Web.HAL.Json;
+using HomeMyDay.Infrastructure.Database;
+using HomeMyDay.Infrastructure.Extensions;
+using HomeMyDay.Infrastructure.Identity;
+using HomeMyDay.Web.Base.Extensions;
+using HomeMyDay.Web.Site.Cms.Extensions;
+using HomeMyDay.Web.Site.Home.Extensions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Formatters;
+using Microsoft.AspNetCore.Mvc.Razor;
+using Microsoft.AspNetCore.Rewrite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using System;
-using Microsoft.AspNetCore.Mvc.Razor;
-using HomeMyDay.Infrastructure.Database;
-using HomeMyDay.Web.Site.Home.Extensions;
-using HomeMyDay.Infrastructure.Extensions;
-using HomeMyDay.Infrastructure.Identity;
-using HomeMyDay.Web.Site.Cms.Extensions;
-using HomeMyDay.Web.Base.Extensions;
 using Newtonsoft.Json.Serialization;
-using Microsoft.AspNetCore.Mvc.Formatters;
-using Halcyon.Web.HAL.Json;
+using System;
 using System.Buffers;
+using System.Globalization;
 
 namespace HomeMyDay.Web
 {
@@ -62,7 +65,8 @@ namespace HomeMyDay.Web
 				// Cookie settings
 				options.Cookie.HttpOnly = true;
 				options.LoginPath = "/Account/Login"; // If the LoginPath is not set here, ASP.NET Core will default to /Account/Login
-				options.LogoutPath = "/Account/Logout"; // If the LogoutPath is not set here, ASP.NET Core will default to /Account/Logout               
+				options.LogoutPath = "/Account/Logout"; // If the LogoutPath is not set here, ASP.NET Core will default to /Account/Logout      
+				options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
 				options.SlidingExpiration = true;
 			});
 
@@ -83,7 +87,10 @@ namespace HomeMyDay.Web
 				options.AddCmsViews();
 			});
 
-			services.AddMvc()
+			services.AddMvc(options =>
+			{
+				options.Filters.Add(new RequireHttpsAttribute());
+			})
 			.AddJsonOptions(options => {
 				options.SerializerSettings.PreserveReferencesHandling = Newtonsoft.Json.PreserveReferencesHandling.Objects;
 				options.SerializerSettings.ContractResolver = new CamelCasePropertyNamesContractResolver();
@@ -97,6 +104,11 @@ namespace HomeMyDay.Web
 		// This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
 		public void Configure(IApplicationBuilder app, IHostingEnvironment env, HomeMyDayDbContext homeMyDayDbContext, AppIdentityDbContext appIdentityDbContext)
 		{
+			var options = new RewriteOptions()
+			   .AddRedirectToHttps();
+
+			app.UseRewriter(options);
+
 			if (env.IsDevelopment())
 			{
 				app.UseDeveloperExceptionPage();
