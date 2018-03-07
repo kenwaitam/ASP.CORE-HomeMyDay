@@ -27,7 +27,8 @@ namespace HomeMyDay.Web
 				var config = options.ApplicationServices.GetRequiredService<IConfiguration>();
 				var certificateSettings = config.GetSection("Certificate");
 				var certificate = new X509Certificate2(certificateSettings.GetValue<string>("Location"));
-				options.Listen(IPAddress.Any, 44376, listenOptions =>
+
+				options.Listen(IPAddress.Any, 44387, listenOptions =>
 				{
 					listenOptions.UseHttps(certificate);
 				});

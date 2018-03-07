@@ -7,6 +7,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Security;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 
 namespace HomeMyDay.Infrastructure.Repository
@@ -16,11 +18,18 @@ namespace HomeMyDay.Infrastructure.Repository
 		private readonly IConfiguration _configuration;
 
 		private string uri;
+		private readonly X509Certificate2 clietnCertificate;
+		private readonly string serverCertificate;
 
 		public MDBAccommodationRepository(IConfiguration config)
 		{
 			this._configuration = config;
 			this.uri = _configuration.GetSection("ExternalAddresses").GetSection("NodeIp").Value + "/api/v1/accommodations";
+			
+			var certificateSettings = config.GetSection("Certificate");
+			var servercertificateSettings = config.GetSection("Certificate");
+			clietnCertificate = new X509Certificate2(certificateSettings.GetValue<string>("Location"));
+			serverCertificate = servercertificateSettings.GetValue<string>("ServerCa");
 		}
 
 		public IEnumerable<Accommodation> Accommodations => this.GetAccommodations();
@@ -32,8 +41,16 @@ namespace HomeMyDay.Infrastructure.Repository
 				var accommodations = new List<Accommodation>();
 
 				HttpWebRequest request = (HttpWebRequest)WebRequest.Create(uri);
-				request.ServerCertificateValidationCallback += (sender, certificate, chain, sslPolicyErrors) => true;
+
+				request.ServerCertificateValidationCallback += (sender, certificate, chain, errors) =>
+				{
+					// return errors == SslPolicyErrors.None && hash.Contains(certificate.GetCertHashString());
+					return errors == SslPolicyErrors.RemoteCertificateChainErrors && ValidateServerCert(certificate);
+				};
+
 				request.Method = WebRequestMethods.Http.Get;
+
+				request.ClientCertificates.Add(clietnCertificate);
 
 				HttpWebResponse response = (HttpWebResponse)request.GetResponse();
 				Stream dataStream = response.GetResponseStream();
@@ -50,7 +67,6 @@ namespace HomeMyDay.Infrastructure.Repository
 			}
 			catch(Exception ex)
 			{
-				Console.WriteLine(ex.ToString());
 				throw new Exception("An error has occurred while retrieving accommodations: '{0}'", ex);
 			}				
 		}
@@ -62,8 +78,16 @@ namespace HomeMyDay.Infrastructure.Repository
 				var accommodation = new Accommodation();
 
 				HttpWebRequest request = (HttpWebRequest)WebRequest.Create(uri + "/" + id);
-				request.ServerCertificateValidationCallback += (sender, certificate, chain, sslPolicyErrors) => true;
+
+				request.ServerCertificateValidationCallback += (sender, certificate, chain, errors) =>
+				{
+					// return errors == SslPolicyErrors.None && hash.Contains(certificate.GetCertHashString());
+					return errors == SslPolicyErrors.RemoteCertificateChainErrors && ValidateServerCert(certificate);
+				};
+
 				request.Method = WebRequestMethods.Http.Get;
+
+				request.ClientCertificates.Add(clietnCertificate);
 
 				HttpWebResponse response = (HttpWebResponse)request.GetResponse();
 				Stream dataStream = response.GetResponseStream();
@@ -92,9 +116,15 @@ namespace HomeMyDay.Infrastructure.Repository
 
 				HttpWebRequest request = (HttpWebRequest)WebRequest.Create(uri);
 
-				request.ServerCertificateValidationCallback += (sender, certificate, chain, sslPolicyErrors) => true;
+				request.ServerCertificateValidationCallback += (sender, certificate, chain, errors) =>
+				{
+					// return errors == SslPolicyErrors.None && hash.Contains(certificate.GetCertHashString());
+					return errors == SslPolicyErrors.RemoteCertificateChainErrors && ValidateServerCert(certificate);
+				};
 
 				request.Method = WebRequestMethods.Http.Get;
+
+				request.ClientCertificates.Add(clietnCertificate);
 
 				HttpWebResponse response = (HttpWebResponse)request.GetResponse();
 				Stream dataStream = response.GetResponseStream();
@@ -143,8 +173,16 @@ namespace HomeMyDay.Infrastructure.Repository
 				var url = $"{uri}?search={location}&dateFrom={dateFrom}&dateTo={dateTo}&persons={amountOfGuests}"; 
 
 				HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
-				request.ServerCertificateValidationCallback += (sender, certificate, chain, sslPolicyErrors) => true;
+
+				request.ServerCertificateValidationCallback += (sender, certificate, chain, errors) =>
+				{
+					// return errors == SslPolicyErrors.None && hash.Contains(certificate.GetCertHashString());
+					return errors == SslPolicyErrors.RemoteCertificateChainErrors && ValidateServerCert(certificate);
+				};
+
 				request.Method = WebRequestMethods.Http.Get;
+
+				request.ClientCertificates.Add(clietnCertificate);
 
 				HttpWebResponse response = (HttpWebResponse)request.GetResponse();
 				Stream dataStream = response.GetResponseStream();
@@ -162,6 +200,12 @@ namespace HomeMyDay.Infrastructure.Repository
 			{
 				throw new Exception("An error has occurred while searching for accommodations");
 			} 			
+		}
+
+		public bool ValidateServerCert(X509Certificate certificate)
+		{
+			var hash = X509Certificate.CreateFromCertFile(serverCertificate).GetCertHashString();
+			return hash.Contains(certificate.GetCertHashString());
 		}
 	}
 }
